@@ -4,6 +4,8 @@ Puyo puyo game
 
 # Demo
 
+https://user-images.githubusercontent.com/67353276/177240408-633becf1-69c3-4184-87cb-eab236925fae.mp4
+
 # Requirement
 
 - Python3
