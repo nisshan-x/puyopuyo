@@ -4,7 +4,7 @@ Puyo puyo game
 
 # Demo
 
-https://user-images.githubusercontent.com/67353276/177240408-633becf1-69c3-4184-87cb-eab236925fae.mp4
+https://user-images.githubusercontent.com/67353276/177263379-a7fa8aa1-7669-4261-88bf-4da1288598c4.mp4
 
 # Requirement
 
