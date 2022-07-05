@@ -11,6 +11,7 @@ https://user-images.githubusercontent.com/67353276/177240408-633becf1-69c3-4184-
 - Python3
 - pygame
 - Numpy
+- Joystick (option)
 
 # Installation
 
@@ -28,17 +29,17 @@ python3 main.py
 
 ## Key input
 
-| Key   |                        |
-| ----- | ---------------------- |
-| LEFT  | Move left              |
-| RIGHT | Move right             |
-| DOWN  | Fall fast              |
-| Z     | Rotate left            |
-| X     | Rotate Right           |
-| R     | Restart game           |
-| P     | Pause and resume game  |
-| Q     | Quit                   |
-| W     | Puyos appear randomly! |
+| Key   | PS3 Joystick      | Function               |
+| ----- | ----------------- | ---------------------- |
+| LEFT  | LEFT              | Move left              |
+| RIGHT | RIGHT             | Move right             |
+| DOWN  | DOWN              | Fall fast              |
+| Z     | Cross             | Rotate left            |
+| X     | Circle            | Rotate Right           |
+| R     | START             | Restart game           |
+| P     | SELECT            | Pause and resume game  |
+| Q     | L + R             | Quit                   |
+| W     | Square + Triangle | Puyos appear randomly! |
 
 # Author
 

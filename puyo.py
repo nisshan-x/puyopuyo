@@ -54,10 +54,6 @@ class Puyo:
     # YELLOW = 4
     # PURPLE = 5
 
-    # debug
-    button1 = pygame.Rect(300, 30, 50, 50)
-    button2 = pygame.Rect(300, 130, 50, 50)
-
     rensa_num = 0
     rensa_status = False
     score_rensa_num = 0
@@ -78,10 +74,18 @@ class Puyo:
     MUKI_NUM = 4
 
     falling_speed = 20
+    speed_up_counter = 0
+    SPEED_UP_INTERVAL = 2000
 
     game_state = GameState.INITIAL
     game_restart = False
     game_pause = False
+
+    joy_button_num = 0
+    PS3_BTN_NUM = 17
+    joy_btn = [0] * PS3_BTN_NUM
+    pre_joy_btn = [0] * PS3_BTN_NUM
+    joy_btn_pressed = [0] * PS3_BTN_NUM
 
     def __init__(self):
         pygame.init()
@@ -117,6 +121,16 @@ class Puyo:
         self.font2 = pygame.font.SysFont(None, 18)
         self.text2 = self.font2.render("Rensa", True, (255, 255, 255))
 
+        # Joystick
+        pygame.joystick.init()
+        try:
+            self.joy = pygame.joystick.Joystick(0)  # create a joystick instance
+            self.joy.init()  # init instance
+            print("Joystick Name: " + self.joy.get_name())
+            self.joy_button_num = self.joy.get_numbuttons()
+        except pygame.error:
+            print("Joystick was not detected!")
+
     def __del__(self):
         pygame.quit()
         sys.exit()
@@ -129,13 +143,18 @@ class Puyo:
         self.sound_delete = pygame.mixer.Sound("sound/puyopuyo_effect_delete.mp3")
         self.sound_delete.play()
 
-    def draw_puyo(self, color, x, y):
+    def draw_puyo(self, color, x, y, main_flag):
         pygame.draw.circle(
             self.screen,
             color,
             (x, y),
             self.PUYO_RADIUS - 2,
         )
+        if main_flag:
+            pygame.draw.circle(
+                self.screen, self.C_WHITE, (x, y), self.PUYO_RADIUS - 2, 1
+            )
+
         # eyes
         for i in range(self.EYE_NUM):
             pygame.draw.circle(
@@ -157,6 +176,12 @@ class Puyo:
                 self.EYE_RADIUS_SMALL,
             )
 
+    def is_main_puyo(self, c, r):
+        if self.cur_puyo_pos[0] == c and self.cur_puyo_pos[1] == r:
+            return True
+        else:
+            return False
+
     def draw_puyos(self):
         for c in range(self.COL_NUM):
             for r in range(self.ROW_NUM):
@@ -165,6 +190,7 @@ class Puyo:
                         self.colors[self.puyo_field[c][r]],
                         self.DISP_FIELD_TOP_LEFT[0] + self.PUYO_RADIUS * (2 * c + 1),
                         self.DISP_FIELD_TOP_LEFT[1] + self.PUYO_RADIUS * (2 * r - 1),
+                        self.is_main_puyo(c, r),
                     )
 
     def draw_hidden_bar(self):
@@ -210,6 +236,7 @@ class Puyo:
             + self.DISP_FIELD_SIZE[0]
             + self.PUYO_RADIUS * 4,
             self.DISP_FIELD_TOP_LEFT[1] + self.PUYO_RADIUS * 2,
+            False,
         )
         self.draw_puyo(
             self.colors[self.next_sub_puyo_color],
@@ -217,6 +244,7 @@ class Puyo:
             + self.DISP_FIELD_SIZE[0]
             + self.PUYO_RADIUS * 4,
             self.DISP_FIELD_TOP_LEFT[1] + self.PUYO_RADIUS * 4,
+            False,
         )
 
     def check_chained_list_sub(self, col, row, del_check_puyo, chained_list, cur_col):
@@ -309,7 +337,7 @@ class Puyo:
                     c, r, del_check_puyo, chained_list
                 )
                 if len(chained_list) >= 4:
-                    print(len(chained_list), chained_list)
+                    # print(len(chained_list), chained_list)
 
                     # delete
                     for item in chained_list:
@@ -325,28 +353,28 @@ class Puyo:
 
                     no_chain_to_delete_flag = False
 
-        print("rensa_num", self.rensa_num)
+        # print("rensa_num", self.rensa_num)
 
         if no_chain_to_delete_flag and not self.check_droppable():
             self.rensa_status = False
             self.rensa_num = 0
 
-    def turn_left_or_right(self, direction):
+    def rotate_left_or_right(self, direction):
         if direction == "left":
             self.next_sub_puyo_muki = (self.sub_puyo_muki - 1) % self.MUKI_NUM
         else:
             self.next_sub_puyo_muki = (self.sub_puyo_muki + 1) % self.MUKI_NUM
 
         if self.next_sub_puyo_muki == 0:  # go right
-            self.turn_and_go_right()
+            self.rotate_and_go_right()
         if self.next_sub_puyo_muki == 1:  # go down
-            self.turn_and_go_down()
+            self.rotate_and_go_down()
         if self.next_sub_puyo_muki == 2:  # go left
-            self.turn_and_go_left()
+            self.rotate_and_go_left()
         if self.next_sub_puyo_muki == 3:  # go up
-            self.turn_and_go_up()
+            self.rotate_and_go_up()
 
-    def turn_and_go_right(self):
+    def rotate_and_go_right(self):
         # 右にぷよがあるか？ もしくは右に壁があるか？
         if (self.cur_puyo_pos[0] == self.COL_NUM - 1) or (
             self.cur_puyo_pos[0] < self.COL_NUM - 1
@@ -399,7 +427,7 @@ class Puyo:
             self.cur_sub_puyo_pos[1] = self.cur_puyo_pos[1]
             self.sub_puyo_muki = self.next_sub_puyo_muki
 
-    def turn_and_go_down(self):
+    def rotate_and_go_down(self):
         # サブを下にしたい。
         # メインが最下層にあるか？　もしくは下にぷよがあるか？
         if self.cur_puyo_pos[1] == self.ROW_NUM - 1:
@@ -460,7 +488,7 @@ class Puyo:
             self.cur_sub_puyo_pos[1] = self.cur_puyo_pos[1] + 1
             self.sub_puyo_muki = self.next_sub_puyo_muki
 
-    def turn_and_go_left(self):
+    def rotate_and_go_left(self):
         # 左にぷよがあるか？ もしくは左に壁があるか？
         if (self.cur_puyo_pos[0] == 0) or (
             self.cur_puyo_pos[0] > 0
@@ -513,7 +541,7 @@ class Puyo:
             self.cur_sub_puyo_pos[1] = self.cur_puyo_pos[1]
             self.sub_puyo_muki = self.next_sub_puyo_muki
 
-    def turn_and_go_up(self):
+    def rotate_and_go_up(self):
         # サブを上にしたい
         # メインの上の位置にサブを置く
         # 　サブを新しい位置に置く
@@ -764,12 +792,12 @@ class Puyo:
             elif event.key == K_w:
                 # randomize puyo for test
                 self.puyo_field = np.random.randint(0, 6, (self.COL_NUM, self.ROW_NUM))
-            elif event.key == K_z:  # turn left
+            elif event.key == K_z:  # rotate left
                 if self.game_state == GameState.FLOATING:
-                    self.turn_left_or_right("left")
-            elif event.key == K_x:  # turn right
+                    self.rotate_left_or_right("left")
+            elif event.key == K_x:  # rotate right
                 if self.game_state == GameState.FLOATING:
-                    self.turn_left_or_right("right")
+                    self.rotate_left_or_right("right")
             elif event.key == K_r:
                 self.game_restart = True
             elif event.key == K_p:
@@ -780,6 +808,42 @@ class Puyo:
         keys = pygame.key.get_pressed()
         if keys[K_DOWN]:
             self.my_tick = self.falling_speed
+
+        # update joystick event
+        if pygame.joystick.get_count():
+            for i in range(self.joy_button_num):
+                self.pre_joy_btn[i] = self.joy_btn[i]
+                self.joy_btn[i] = self.joy.get_button(i)
+
+                if self.pre_joy_btn[i] == False and self.joy_btn[i]:
+                    self.joy_btn_pressed[i] = True
+                else:
+                    self.joy_btn_pressed[i] = False
+
+            if self.joy_btn[14]:  # down - log press
+                self.my_tick = self.falling_speed
+            elif self.joy_btn_pressed[15]:  # left
+                self.move("left")
+            elif self.joy_btn_pressed[16]:  # right
+                self.move("right")
+            elif self.joy_btn_pressed[4] and self.joy_btn_pressed[5]:  # L and R
+                pygame.quit()
+                sys.exit()
+            elif (
+                self.joy_btn_pressed[2] and self.joy_btn_pressed[3]
+            ):  # triangle and square
+                # randomize puyo for test
+                self.puyo_field = np.random.randint(0, 6, (self.COL_NUM, self.ROW_NUM))
+            elif self.joy_btn_pressed[0]:  # cross - rotate left
+                if self.game_state == GameState.FLOATING:
+                    self.rotate_left_or_right("left")
+            elif self.joy_btn_pressed[1]:  # circle - rotate right
+                if self.game_state == GameState.FLOATING:
+                    self.rotate_left_or_right("right")
+            elif self.joy_btn_pressed[9]:  # start
+                self.game_restart = True
+            elif self.joy_btn_pressed[8]:  # select
+                self.game_pause = not self.game_pause
 
         # spawn new puyo
         if self.game_state == GameState.SPAWN:
@@ -967,10 +1031,18 @@ class Puyo:
                 sys.exit()
 
         # debug
-        print("self.game_state", self.game_state)
+        # print("self.game_state", self.game_state)
 
         if not self.game_pause:
             self.my_tick += 1
+
+            self.speed_up_counter += 1
+            if self.speed_up_counter % self.SPEED_UP_INTERVAL == 0:
+                if self.falling_speed > 2:
+                    self.falling_speed -= 1
+
+            print("self.falling_speed", self.falling_speed)
+
         self.clock.tick(30)
 
         return self.game_restart
